@@ -1,0 +1,13 @@
+# Roblox Studio lock files
+/*.rbxlx.lock
+/*.rbxl.lock
+
+# Wally
+wally.lock
+sourcemap.json
+/Packages
+/ServerPackages
+
+# Selene
+roblox.toml
+roblox.yml

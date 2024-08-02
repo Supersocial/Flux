@@ -1,5 +1,6 @@
 [package]
 name = "supersocial/flux"
+authors = ["Cody Nelson"]
 description = "Flux is a lightweight game framework"
 version = "0.0.1"
 license = "MIT"

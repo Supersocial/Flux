@@ -1,11 +1,14 @@
 [package]
 name = "supersocial/flux"
-authors = ["Cody Nelson"]
-description = "Flux is a lightweight game framework"
 version = "0.0.1"
-license = "MIT"
 registry = "https://github.com/UpliftGames/wally-index"
+license = "MIT"
 realm = "shared"
+description = "Flux is a lightweight game framework"
+authors = ["Cody Nelson", "KinqAndi"]
+
+include = ["src", "src/**", "wally.toml", "wally.lock", "default.project.json"]
+exclude = ["**"]
 
 [dependencies]
 Promise = "lukadev-0/typed-promise@4.0.2"

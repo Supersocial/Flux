@@ -212,12 +212,7 @@ function FluxServer.GetComponentFromTag(tag: string)
 	assert(tGetComponentFromTag(tag))
 
 	local component = componentRegistry[tag]
-	assert(
-		(not isStarted) or component,
-		`Could not find a Component with the tag "{tag}". Verify a Component with this tag exists.`
-	)
-
-	if not component then
+	if not component and not (isStarted or isStarting) then
 		componentRegistry[tag] = {
 			_temporaryComponent = true,
 		}

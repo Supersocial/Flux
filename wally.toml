@@ -1,5 +1,5 @@
 [package]
-name = "supersocial/flux"
+name = "supersocialinc/flux"
 version = "0.0.1"
 registry = "https://github.com/UpliftGames/wally-index"
 license = "MIT"

@@ -204,7 +204,8 @@ local function IsComponentLike(component: any): (boolean, string)
 end
 
 local function ComponentExists(tag: string): boolean
-	return componentRegistry[tag] ~= nil
+	local foundComponent = componentRegistry[tag]
+	return foundComponent and not foundComponent._temporaryComponent
 end
 
 local tGetLogger = t.tuple(t.string, t.optional(t.valueOf(Logr:GetLogLevels())))
@@ -228,7 +229,17 @@ function FluxClient.SetLogLevel(level: string)
 	FluxLogger:SetLogLevel(level)
 end
 
+local tGetComponentFromTag = t.tuple(t.string)
 function FluxClient.GetComponentFromTag(tag: string)
+	assert(tGetComponentFromTag(tag))
+
+	local component = componentRegistry[tag]
+	if not component and not (isStarted or isStarting) then
+		componentRegistry[tag] = {
+			_temporaryComponent = true,
+		}
+	end
+
 	return componentRegistry[tag]
 end
 
@@ -257,7 +268,9 @@ function FluxClient.GetComponentFromInstanceAndTag(instance: Instance, tag: stri
 end
 
 function FluxClient.CreateComponent(component)
-	return Component.new(component)
+	local componentTable = componentRegistry[component.Tag] or {}
+	componentTable._temporaryComponent = nil
+	return Component.new(componentTable, component)
 end
 
 local tAddComponent = t.tuple(t.instanceIsA("ModuleScript"))
@@ -267,8 +280,8 @@ function FluxClient.AddComponent(component: ModuleScript)
 	local requireStartTime: number = os.clock()
 	FluxLogger:Debug(`AddComponent: Requiring {component.Name}`)
 
-	local requiredComponent: any? = require(component)
-	FluxLogger:Debug(`AddComponent: Required {component.Name} in {CreateBenchmarkTime(requireStartTime)}`)
+	local requiredComponent = require(component)
+	FluxLogger:Debug(`AddComponent: Required {CreateBenchmarkTime(requireStartTime)}`)
 
 	local finalStartTime: number = os.clock()
 	if not IsComponentLike(requiredComponent) then
@@ -283,6 +296,7 @@ function FluxClient.AddComponent(component: ModuleScript)
 		`A Component with the tag "{requiredComponent.Tag}" already exists`
 	)
 
+	requiredComponent._temporaryComponent = nil
 	componentRegistry[requiredComponent.Tag] = requiredComponent
 	FluxLogger:Debug(`AddComponent: Successfully added {CreateBenchmarkTime(finalStartTime)}`)
 
@@ -429,7 +443,11 @@ function FluxClient.Start()
 	end
 
 	-- Start components
-	for _, component in componentRegistry do
+	for tag: string, component in componentRegistry do
+		if component._temporaryComponent then
+			error(`Component named "{tag}" was required but never created.`)
+		end
+
 		task.defer(component.Activate, component)
 	end
 

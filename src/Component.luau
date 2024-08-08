@@ -92,8 +92,8 @@ end
 local Component = {}
 Component.__index = Component
 
-function Component.new(config: ComponentConfig)
-	local customComponent: { [any]: any } = {}
+function Component.new(baseTable, config: ComponentConfig)
+	local customComponent: { [any]: any } = baseTable
 
 	customComponent.__index = customComponent
 	customComponent.__tostring = function()

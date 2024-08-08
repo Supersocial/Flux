@@ -182,7 +182,8 @@ local function CreateTemporaryService(serviceName: string): {}
 end
 
 local function ComponentExists(tag: string): boolean
-	return componentRegistry[tag] ~= nil
+	local foundComponent = componentRegistry[tag]
+	return foundComponent and not foundComponent._temporaryComponent
 end
 
 local tGetLogger = t.tuple(t.string, t.optional(t.valueOf(Logr:GetLogLevels())))
@@ -206,7 +207,17 @@ function FluxServer.SetLogLevel(level: string)
 	FluxLogger:SetLogLevel(level)
 end
 
+local tGetComponentFromTag = t.tuple(t.string)
 function FluxServer.GetComponentFromTag(tag: string)
+	assert(tGetComponentFromTag(tag))
+
+	local component = componentRegistry[tag]
+	if not component and not (isStarted or isStarting) then
+		componentRegistry[tag] = {
+			_temporaryComponent = true,
+		}
+	end
+
 	return componentRegistry[tag]
 end
 
@@ -241,7 +252,7 @@ function FluxServer.AddComponent(component: ModuleScript)
 	local requireStartTime: number = os.clock()
 	FluxLogger:Debug(`AddComponent: Requiring {component.Name}`)
 
-	local requiredComponent: any? = require(component)
+	local requiredComponent = require(component)
 	FluxLogger:Debug(`AddComponent: Required {CreateBenchmarkTime(requireStartTime)}`)
 
 	local finalStartTime: number = os.clock()
@@ -257,6 +268,7 @@ function FluxServer.AddComponent(component: ModuleScript)
 		`A Component with the tag "{requiredComponent.Tag}" already exists`
 	)
 
+	requiredComponent._temporaryComponent = nil
 	componentRegistry[requiredComponent.Tag] = requiredComponent
 	FluxLogger:Debug(`AddComponent: Successfully added {CreateBenchmarkTime(finalStartTime)}`)
 
@@ -264,7 +276,8 @@ function FluxServer.AddComponent(component: ModuleScript)
 end
 
 function FluxServer.CreateComponent(component)
-	return Component.new(component)
+	local componentTable = componentRegistry[component.Tag] or {}
+	return Component.new(componentTable, component)
 end
 
 local tAddComponents = t.tuple(t.Instance, t.optional(t.boolean))
@@ -420,7 +433,7 @@ function FluxServer.Start()
 	-- Check for any temporary controllers
 	for serviceName, service: Service in services do
 		if service._temporaryService then
-			error(`Service named "{serviceName}" was required but nevered created.`)
+			error(`Service named "{serviceName}" was required but never created.`)
 		end
 	end
 
@@ -432,7 +445,11 @@ function FluxServer.Start()
 	end
 
 	-- Start components
-	for _, component in componentRegistry do
+	for tag: string, component in componentRegistry do
+		if component._temporaryComponent then
+			error(`Component named "{tag}" was required but never created.`)
+		end
+
 		task.defer(component.Activate, component)
 	end
 

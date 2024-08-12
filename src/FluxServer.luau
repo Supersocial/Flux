@@ -181,11 +181,6 @@ local function CreateTemporaryService(serviceName: string): {}
 	return temporaryService
 end
 
-local function ComponentExists(tag: string): boolean
-	local foundComponent = componentRegistry[tag]
-	return foundComponent and not foundComponent._temporaryComponent
-end
-
 local tGetLogger = t.tuple(t.string, t.optional(t.valueOf(Logr:GetLogLevels())))
 function FluxServer.GetLogger(name: string, logLevel: string?)
 	assert(tGetLogger(name, logLevel))
@@ -253,7 +248,7 @@ function FluxServer.AddComponent(component: ModuleScript)
 	FluxLogger:Debug(`AddComponent: Requiring {component.Name}`)
 
 	local requiredComponent = require(component)
-	FluxLogger:Debug(`AddComponent: Required {CreateBenchmarkTime(requireStartTime)}`)
+	FluxLogger:Debug(`AddComponent: Required {component.Name} in {CreateBenchmarkTime(requireStartTime)}`)
 
 	local finalStartTime: number = os.clock()
 	if not IsComponentLike(requiredComponent) then
@@ -263,11 +258,6 @@ function FluxServer.AddComponent(component: ModuleScript)
 		return
 	end
 
-	assert(
-		not ComponentExists(requiredComponent.Tag),
-		`A Component with the tag "{requiredComponent.Tag}" already exists`
-	)
-
 	requiredComponent._temporaryComponent = nil
 	componentRegistry[requiredComponent.Tag] = requiredComponent
 	FluxLogger:Debug(`AddComponent: Successfully added {CreateBenchmarkTime(finalStartTime)}`)
@@ -276,8 +266,9 @@ function FluxServer.AddComponent(component: ModuleScript)
 end
 
 function FluxServer.CreateComponent(component)
-	local componentTable = componentRegistry[component.Tag] or {}
-	return Component.new(componentTable, component)
+	local baseTable = componentRegistry[component.Tag]
+	assert((not baseTable) or baseTable._temporaryComponent, `Component {component.Tag} already exists!`)
+	return Component.new(baseTable or {}, component)
 end
 
 local tAddComponents = t.tuple(t.Instance, t.optional(t.boolean))

@@ -2,7 +2,7 @@
 
 You can install this package on Wally
 ```toml
-Flux = "supersocial/flux@0.0.1"
+Flux = "supersocial/flux@0.0.2"
 ```
 
 ## About

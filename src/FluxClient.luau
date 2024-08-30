@@ -203,11 +203,6 @@ local function IsComponentLike(component: any): (boolean, string)
 	})(component)
 end
 
-local function ComponentExists(tag: string): boolean
-	local foundComponent = componentRegistry[tag]
-	return foundComponent and not foundComponent._temporaryComponent
-end
-
 local tGetLogger = t.tuple(t.string, t.optional(t.valueOf(Logr:GetLogLevels())))
 function FluxClient.GetLogger(name: string, logLevel: string?)
 	assert(tGetLogger(name, logLevel))
@@ -268,9 +263,9 @@ function FluxClient.GetComponentFromInstanceAndTag(instance: Instance, tag: stri
 end
 
 function FluxClient.CreateComponent(component)
-	local componentTable = componentRegistry[component.Tag] or {}
-	componentTable._temporaryComponent = nil
-	return Component.new(componentTable, component)
+	local baseTable = componentRegistry[component.Tag]
+	assert((not baseTable) or baseTable._temporaryComponent, `Component {component.Tag} already exists!`)
+	return Component.new(baseTable or {}, component)
 end
 
 local tAddComponent = t.tuple(t.instanceIsA("ModuleScript"))
@@ -281,7 +276,7 @@ function FluxClient.AddComponent(component: ModuleScript)
 	FluxLogger:Debug(`AddComponent: Requiring {component.Name}`)
 
 	local requiredComponent = require(component)
-	FluxLogger:Debug(`AddComponent: Required {CreateBenchmarkTime(requireStartTime)}`)
+	FluxLogger:Debug(`AddComponent: Required {component.Name} in {CreateBenchmarkTime(requireStartTime)}`)
 
 	local finalStartTime: number = os.clock()
 	if not IsComponentLike(requiredComponent) then
@@ -290,11 +285,6 @@ function FluxClient.AddComponent(component: ModuleScript)
 		)
 		return
 	end
-
-	assert(
-		not ComponentExists(requiredComponent.Tag),
-		`A Component with the tag "{requiredComponent.Tag}" already exists`
-	)
 
 	requiredComponent._temporaryComponent = nil
 	componentRegistry[requiredComponent.Tag] = requiredComponent
